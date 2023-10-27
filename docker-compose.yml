@@ -1,0 +1,99 @@
+version: '3'
+
+volumes:
+  postgres:
+  postgres_stag:
+
+services:
+  db_prod:
+    container_name: postgres_prod
+    image: postgres:latest
+    restart: always
+    user: postgres
+    environment:
+      - POSTGRES_USER=
+      - POSTGRES_PASSWORD=
+      - POSTGRES_DB=
+    ports:
+     - "5432:5432"
+    volumes:
+    - postgres:/var/lib/postgresql/data
+
+  backend_prod:
+    image: <IMAGE_NAME>
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    depends_on:
+      - db_prod
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://<POSTGRES_USER>:<POSTGRES_PASSWORD>@<DB_CONTAINER_NAME>:5432/postgres
+
+  frontend_prod:
+    image: <IMAGE_NAME>
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.production
+    volumes:
+      - ./frontend_prod:/app
+    environment:
+      - VITE_BACKEND_API_URL=
+    env_file:
+      - ./frontend/.env.production
+    depends_on:
+      - backend_prod
+
+#STAGING
+
+  db_stag:
+    container_name: postgres_stag
+    image: postgres:latest
+    restart: always
+    user: postgres
+    environment:
+      - POSTGRES_USER=
+      - POSTGRES_PASSWORD=
+      - POSTGRES_DB=
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_stag:/var/lib/postgresql/data
+
+  frontend_stag:
+    image: orca-front-stag
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.staging
+    volumes:
+      - ./frontend_stag:/app
+    environment:
+      - VITE_BACKEND_API_URL=http://staging-orcafrontend.duckdns.org/api
+    env_file:
+     - ./frontend/.env.development
+    depends_on:
+      - backend_stag
+
+
+  backend_stag:
+    image: <IMAGE_NAME>
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    depends_on:
+      - db_stag
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://<POSTGRES_USER>:<POSTGRES_PASSWORD>@<DB_CONTAINER_NAME>:5432/postgres
+
+  nginx:
+    image: <IMAGE_NAME>
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+    ports:
+      - "80:80"
+    depends_on:
+      - <CONTAINER_NAME>
