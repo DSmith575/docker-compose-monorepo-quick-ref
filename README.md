@@ -1,1 +1,1 @@
-# docker-compose-monorepo-quick-ref
+# Quick self reference for setting up basic docker-compose multi-container
